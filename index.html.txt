@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>ניהול נקודות שכב"ג - סניף אילת</title>
+    <!-- סקריפט לקונפטי -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;700;900&display=swap');
+
+        body { 
+            font-family: 'Heebo', sans-serif; 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background-color: #f4f7f6; 
+            color: #2c3e50;
+            padding: 20px;
+            overflow-x: hidden; 
+        }
+        
+        /* כפתור תפריט המבורגר */
+        .menu-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            color: #006b6b;
+            border: 2px solid #006b6b;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 2000;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .menu-btn:hover { background: #006b6b; color: white; transform: scale(1.1); }
+
+        /* תפריט צד (Sidebar) */
+        .sidebar {
+            position: fixed; top: 0; right: -350px; width: 350px; height: 100vh;
+            background: white; box-shadow: -5px 0 15px rgba(0,0,0,0.1);
+            z-index: 1500; transition: right 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            padding: 80px 20px 20px 20px; box-sizing: border-box;
+            display: flex; flex-direction: column; gap: 15px;
+        }
+
+        .sidebar.open { right: 0; }
+        
+        .sidebar-title {
+            text-align: center; color: #006b6b; font-size: 1.8em; 
+            font-weight: 900; margin-bottom: 20px; border-bottom: 2px solid #f1f2f6; padding-bottom: 15px;
+        }
+
+        /* כפתורי הניווט בתפריט צד */
+        .sidebar-nav-btn {
+            background: #f8f9fa; border: 2px solid #e0e0e0; color: #2c3e50;
+            padding: 15px; border-radius: 12px; font-size: 1.2em; font-weight: bold;
+            cursor: pointer; text-align: right; transition: all 0.2s;
+            display: flex; align-items: center; gap: 15px;
+        }
+        .sidebar-nav-btn:hover { background: #e0f2f1; border-color: #006b6b; transform: translateX(-5px); }
+
+        /* שכבת רקע חצי שקופה */
+        .sidebar-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 1400; display: none; opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .sidebar-overlay.open { display: block; opacity: 1; }
+
+        /* כותרת האתר */
+        .header-container {
+            text-align: center; background: linear-gradient(135deg, #006b6b 0%, #009688 100%);
+            padding: 25px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0, 107, 107, 0.2);
+            margin-bottom: 25px; color: white; position: relative; overflow: hidden; margin-top: 40px; 
+        }
+
+        .header-container::before {
+            content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%); transform: rotate(45deg);
+        }
+        
+        .logo { max-width: 120px; margin-bottom: 10px; border-radius: 50%; box-shadow: 0 5px 15px rgba(0,0,0,0.2); background-color: white; padding: 10px; }
+        h1 { margin: 0; font-size: 2.2em; font-weight: 900; text-shadow: 2px 2px 4px rgba(0,0,0,0.2); }
+        
+        .controls-bar { display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; flex-wrap: wrap; gap: 15px; }
+
+        .action-btn {
+            background-color: #006b6b; color: white; padding: 12px 22px; border-radius: 12px; cursor: pointer; 
+            font-weight: bold; font-family: inherit; transition: all 0.2s; font-size: 16px; border: none; display: flex; align-items: center; gap: 8px;
+            box-shadow: 0 4px 10px rgba(0, 107, 107, 0.2);
+        }
+        .action-btn:hover { background-color: #004d4d; transform: translateY(-2px); }
+        .action-btn:active { transform: scale(0.95); }
+
+        .close-month-btn { background-color: #fff3cd; border: 2px solid #ffc107; color: #856404; box-shadow: none; }
+        .close-month-btn:hover { background-color: #ffc107; color: #212529; }
+
+        .special-bonuses-bar { display: flex; gap: 10px; flex-wrap: wrap; }
+        .global-bonus-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+        /* פודיום מנצחים */
+        .podium-section { display: flex; justify-content: center; align-items: flex-end; margin: 60px 0 40px 0; gap: 15px; }
+        .podium-step {
+            display: flex; flex-direction: column; align-items: center; border-radius: 15px 15px 10px 10px; padding: 20px 10px 15px 10px;
+            width: 190px; color: white; box-shadow: 0 10px 25px rgba(0,0,0,0.2); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative;
+        }
+        .podium-step:hover { transform: translateY(-8px); }
+
+        .step-1 { background: linear-gradient(135deg, #00796b, #004d40); height: 320px; border-top: 8px solid #FFD700; z-index: 3; }
+        .step-2 { background: linear-gradient(135deg, #009688, #00695c); height: 280px; border-top: 8px solid #C0C0C0; z-index: 2; }
+        .step-3 { background: linear-gradient(135deg, #26a69a, #00897b); height: 240px; border-top: 8px solid #cd7f32; z-index: 1; }
+        .step-bull { background: linear-gradient(135deg, #d32f2f, #b71c1c) !important; border-top-color: #ff5252 !important; }
+
+        .podium-medal { position: absolute; top: -35px; font-size: 45px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3)); }
+        .podium-rank { font-size: 2em; font-weight: 900; margin-bottom: 5px; opacity: 0.9; }
+        .podium-name { font-size: 1.2em; font-weight: bold; text-align: center; margin-bottom: 5px; line-height: 1.2; }
+        .podium-level { font-size: 0.8em; background: rgba(0,0,0,0.2); padding: 3px 8px; border-radius: 10px; margin-bottom: auto; padding-bottom: 5px;}
+
+        .podium-controls-wrapper {
+            background: white; border-radius: 12px; padding: 10px; width: 95%; box-sizing: border-box; display: flex; flex-direction: column; gap: 8px; margin-top: 10px;
+        }
+
+        /* חלונות קופצים (Modals / Screens) */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.6); z-index: 3000; justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background-color: white; color: #2c3e50; padding: 30px; border-radius: 15px; width: 90%; max-width: 400px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4); text-align: center; animation: modalPop 0.3s ease-out;
+            position: relative; max-height: 85vh; overflow-y: auto; 
+        }
+        .modal-content.wide-modal { max-width: 800px; } 
+        
+        @keyframes modalPop { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        
+        .close-modal-x {
+            position: absolute; top: 15px; left: 15px; background: #f1f2f6; border: none; border-radius: 50%;
+            width: 35px; height: 35px; font-size: 18px; font-weight: bold; color: #333; cursor: pointer; transition: 0.2s;
+        }
+        .close-modal-x:hover { background: #ff4d4d; color: white; }
+
+        .modal-content h3 { margin-top: 0; color: #009688; margin-bottom: 20px;}
+        .modal-input {
+            width: calc(100% - 24px); padding: 12px; border: 2px solid #e0e0e0; background: white; color: #333;
+            border-radius: 8px; font-size: 16px; font-family: inherit; margin-bottom: 15px;
+        }
+        .modal-input:focus { outline: none; border-color: #009688; }
+        select.modal-input { width: 100%; cursor: pointer; }
+        
+        .modal-buttons { display: flex; gap: 10px; justify-content: center; }
+        .modal-btn { padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; border: none; flex: 1; }
+        .modal-btn-confirm { background-color: #006b6b; color: white; }
+        .modal-btn-cancel { background-color: #e0e0e0; color: #333; }
+        .modal-btn-confirm:hover { background-color: #004d4d; }
+
+        /* כרטיסיות הפעילים והשור */
+        .person-card {
+            background: white; padding: 15px 20px; margin-bottom: 15px;
+            border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;
+            border-right: 5px solid #4CAF50; transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .person-card.bull-card { border-right-color: #f44336; background-color: #fffafa; }
+        .person-card:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.15); }
+        
+        .card-right-side { display: flex; flex-direction: column; gap: 5px; }
+        .person-name { font-size: 18px; font-weight: 700; margin: 0; color: #2c3e50; display: flex; align-items: center; gap: 8px;}
+        .person-avatar { font-size: 1.4em; }
+        .level-badge { font-size: 0.85em; font-weight: bold; color: #7f8c8d; background: #f4f7f6; padding: 3px 8px; border-radius: 10px; display: inline-block; width: fit-content;}
+        
+        .card-left-side { display: flex; flex-direction: column; gap: 10px; align-items: flex-end; flex: 1;}
+        .points-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end;}
+        
+        .point-group { display: flex; align-items: center; gap: 8px; background: #f8f9fa; padding: 5px 10px; border-radius: 15px; }
+        .point-btn { 
+            cursor: pointer; border: none; border-radius: 50%; width: 28px; height: 28px; 
+            font-weight: bold; font-size: 16px; display: flex; align-items: center; justify-content: center; transition: transform 0.1s;
+        }
+        .point-btn:active { transform: scale(0.9); }
+        .btn-green { background-color: #4CAF50; color: white; }
+        .btn-red { background-color: #f44336; color: white; }
+        .score-val { font-weight: 900; font-size: 1.3em; min-width: 22px; text-align: center; color: #333; }
+        .score-green { color: #4CAF50 !important; }
+        .score-red { color: #f44336 !important; }
+        
+        .delete-btn { background-color: transparent; color: #999; border: none; width: 35px; height: 35px; font-size: 16px; cursor: pointer; transition: color 0.2s; }
+        .delete-btn:hover { color: #f44336; }
+
+        /* תוכן פנימי של המסכים (מודאלים) */
+        .levels-guide { display: flex; flex-direction: column; gap: 10px; text-align: right;}
+        .level-item { display: flex; align-items: center; justify-content: space-between; background: #f8f9fa; padding: 12px 15px; border-radius: 8px; font-weight: bold; border: 1px solid #eee;}
+        
+        .action-record { display: flex; justify-content: space-between; background: #f8f9fa; padding: 12px; border-radius: 8px; align-items: center; border-right: 4px solid #f1c40f; margin-bottom: 10px;}
+
+        /* היכל התהילה החודשי במסך ייעודי */
+        .hof-grid { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; margin-top: 20px;}
+        .hof-card {
+            background: white; border: 2px solid #e8d070; border-radius: 15px; padding: 20px; width: 200px; text-align: center;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05), inset 0 0 15px rgba(212, 175, 55, 0.05); position: relative; transition: transform 0.3s;
+        }
+        .hof-card.hof-bull { border-color: #f44336; background: #fff5f5; }
+        .hof-card:hover { transform: translateY(-8px) scale(1.03); }
+        .hof-icon { font-size: 3em; margin-bottom: 10px; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.2)); }
+        .hof-month { font-size: 1.1em; color: #aa771c; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; font-weight: 900; }
+        .hof-bull .hof-month { color: #d32f2f; }
+        .hof-name { font-size: 1.3em; font-weight: 900; color: #2c3e50; margin: 10px 0; line-height: 1.2; }
+        .hof-score { font-size: 1.2em; color: #b38728; font-weight: bold; background: #fffdf5; border-radius: 20px; padding: 5px 10px; display: inline-block; border: 1px solid #fcf6ba; }
+        .hof-bull .hof-score { color: #d32f2f; border-color: #ffcdd2; background: white;}
+        .hof-edit-btn { position: absolute; top: 10px; left: 10px; background: none; border: none; font-size: 15px; color: #bf953f; cursor: pointer; opacity: 0.5; transition: opacity 0.2s; }
+        .hof-edit-btn:hover { opacity: 1; transform: scale(1.2); }
+
+        .summary-card {
+            background: #e0f2f1; padding: 15px 20px; border-radius: 12px; margin-top: 20px;
+            display: flex; justify-content: space-between; font-weight: 900; font-size: 1.1em; color: #009688; box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .floating-whatsapp-btn {
+            position: fixed; bottom: 30px; left: 30px; background-color: #25D366; color: white;
+            border: none; border-radius: 50%; width: 60px; height: 60px; display: flex; justify-content: center; align-items: center;
+            box-shadow: 0 4px 15px rgba(37, 211, 102, 0.4); cursor: pointer; z-index: 1000; transition: transform 0.3s;
+        }
+        .floating-whatsapp-btn:hover { transform: scale(1.1) rotate(5deg); background-color: #1ebe57; }
+        
+        .bull-win-animation { animation: shakeRed 0.8s cubic-bezier(.36,.07,.19,.97) both; background-color: #4a0000 !important; color: white !important;}
+        @keyframes shakeRed { 10%, 90% { transform: translate3d(-2px, 0, 0); } 20%, 80% { transform: translate3d(4px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-8px, 0, 0); } 40%, 60% { transform: translate3d(8px, 0, 0); } }
+
+        /* עיצוב רשומת טבלה שנתית */
+        .yearly-record {
+            display: flex; justify-content: space-between; background: white; padding: 12px 20px; border-radius: 12px; align-items: center; border: 1px solid #e0e0e0; box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        }
+        .yearly-left { display:flex; align-items:center; gap:10px; flex-wrap: wrap;}
+
+        @media (max-width: 600px) {
+            .podium-section { flex-direction: column; align-items: center; margin: 40px 0 20px 0; }
+            .podium-step { width: 90%; margin-bottom: 25px; height: auto !important;}
+            .podium-medal { right: 10px; top: -20px; font-size: 35px; }
+            .floating-whatsapp-btn { bottom: 20px; left: 20px; width: 50px; height: 50px; }
+            .floating-whatsapp-btn svg { width: 25px; height: 25px; }
+            .person-card { flex-direction: column; align-items: flex-start; }
+            .card-left-side { align-items: flex-start; width: 100%;}
+            .points-controls { justify-content: flex-start; }
+            .sidebar { width: 300px; right: -300px;}
+        }
+    </style>
+</head>
+<body>
+
+    <!-- כפתור תפריט צד -->
+    <div class="menu-btn" onclick="toggleSidebar()" title="תפריט">
+        ⋮
+    </div>
+
+    <!-- רקע להחשכת המסך כשהתפריט פתוח -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+    <!-- תפריט הצד (Sidebar) -->
+    <div class="sidebar" id="sidebar">
+        <h2 class="sidebar-title">תפריט שכב"ג</h2>
+        
+        <button class="sidebar-nav-btn" onclick="openModal('levelsModal')">
+            <span style="font-size: 1.5em;">⭐</span> מדריך דרגות
+        </button>
+        <button class="sidebar-nav-btn" onclick="openModal('actionHofModal')">
+            <span style="font-size: 1.5em;">🏅</span> מצטייני פעולות
+        </button>
+        <button class="sidebar-nav-btn" onclick="openModal('monthlyHofModal')">
+            <span style="font-size: 1.5em;">👑</span> היכל התהילה החודשי
+        </button>
+        <button class="sidebar-nav-btn" onclick="openModal('yearlyTableModal')">
+            <span style="font-size: 1.5em;">📅</span> טבלה שנתית
+        </button>
+    </div>
+
+    <!-- מסך: טבלה שנתית -->
+    <div class="modal-overlay" id="yearlyTableModal">
+        <div class="modal-content wide-modal" style="background: #f8f9fa;">
+            <button class="close-modal-x" onclick="closeModal('yearlyTableModal')">✖</button>
+            <h3 style="font-size: 2em; color: #006b6b; margin-bottom: 20px;">📅 טבלה שנתית</h3>
+            
+            <!-- פודיום שנתי -->
+            <div id="yearlyPodiumArea"></div>
+
+            <!-- שאר הטבלה השנתית -->
+            <div id="yearlyTableList" style="display:flex; flex-direction:column; max-height: 50vh; overflow-y: auto; padding-right: 5px;"></div>
+        </div>
+    </div>
+
+    <!-- מסך: מדריך דרגות -->
+    <div class="modal-overlay" id="levelsModal">
+        <div class="modal-content">
+            <button class="close-modal-x" onclick="closeModal('levelsModal')">✖</button>
+            <h3>⭐ מדריך דרגות</h3>
+            <div class="levels-guide">
+                <div class="level-item"><span>💎 אגדת שכב"ג</span> <span style="color:#7f8c8d;">40+ נק'</span></div>
+                <div class="level-item"><span>🥇 כוכב זהב</span> <span style="color:#7f8c8d;">30+ נק'</span></div>
+                <div class="level-item"><span>🥈 כוכב כסף</span> <span style="color:#7f8c8d;">20+ נק'</span></div>
+                <div class="level-item"><span>🥉 כוכב ארד</span> <span style="color:#7f8c8d;">10+ נק'</span></div>
+                <div class="level-item"><span>🌱 מתחיל</span> <span style="color:#7f8c8d;">0-9 נק'</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- מסך: היכל מצטייני פעולות -->
+    <div class="modal-overlay" id="actionHofModal">
+        <div class="modal-content">
+            <button class="close-modal-x" onclick="closeModal('actionHofModal')">✖</button>
+            <h3 style="color: #d35400;">⭐ היכל מצטייני פעולות</h3>
+            <div id="actionHofList" style="display:flex; flex-direction:column; gap:10px; margin-top:20px;"></div>
+        </div>
+    </div>
+
+    <!-- מסך: היכל התהילה החודשי -->
+    <div class="modal-overlay" id="monthlyHofModal">
+        <div class="modal-content wide-modal" style="background: linear-gradient(135deg, #ffffff 0%, #f9f9f9 100%);">
+            <button class="close-modal-x" onclick="closeModal('monthlyHofModal')">✖</button>
+            <h3 style="font-size: 2.2em; background: linear-gradient(to right, #bf953f, #fcf6ba, #b38728); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">👑 היכל התהילה החודשי 👑</h3>
+            <div class="hof-grid" id="hofArea"></div>
+        </div>
+    </div>
+
+    <!-- כותרת ראשית של האתר -->
+    <div class="header-container">
+        <img src="data:image/png;base64,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" alt="לוגו כנפיים של קרמבו סניף אילת" class="logo">
+        <h1>ניהול נקודות שכב"ג</h1>
+    </div>
+
+    <!-- כפתורי שליטה מרכזיים -->
+    <div class="controls-bar">
+        <button class="action-btn" onclick="openModal('addModal')">
+            <span style="font-size: 1.2em;">+</span> הוסף פעיל
+        </button>
+
+        <div class="special-bonuses-bar">
+            <button class="action-btn" style="background-color: #1565c0;" onclick="openBonusModal('action')">⭐ מצטיין פעולה</button>
+            <button class="action-btn" style="background-color: #1565c0;" onclick="openBonusModal('morale')">📣 מצטיין מוראלים</button>
+        </div>
+        
+        <div class="global-bonus-controls">
+            <button class="action-btn" style="background-color: #f44336;" onclick="updateBullPoints(-5)">-5 לשור</button>
+            <button class="action-btn" style="background-color: #f44336;" onclick="updateBullPoints(-10)">-10 לשור</button>
+            <button class="action-btn" style="background-color: #d32f2f;" onclick="updateBullPoints('all')">איפוס השור</button>
+        </div>
+
+        <button class="action-btn close-month-btn" onclick="closeMonth()">
+            📅 סגור חודש
+        </button>
+    </div>
+
+    <!-- כפתור וואטסאפ מרחף -->
+    <button class="floating-whatsapp-btn" onclick="shareToWhatsApp()" title="שתף מצב עדכני לוואטסאפ">
+        <svg viewBox="0 0 32 32" fill="white">
+            <path d="M16.05 32h-.05c-2.65 0-5.25-.65-7.55-1.9l-8.45 2.2 2.25-8.25C1.05 21.8.35 18.95.35 16c0-8.8 7.15-15.95 15.95-15.95S32.25 7.2 32.25 16c0 8.8-7.15 15.95-15.95 15.95zm-7.65-5.2l.4.25c2.15 1.25 4.65 1.95 7.2 1.95 7.7 0 13.95-6.25 13.95-13.95S23.75 2.05 16.05 2.05c-7.7 0-13.95 6.25-13.95 13.95 0 2.65.75 5.15 2.1 7.35l.3.45-1.3 4.8 4.95-1.35zm9.8-12.75c-.35-.75-.75-.8-1.1-.8h-.9c-.3 0-.8.1-1.2.55s-1.6 1.55-1.6 3.8 1.65 4.4 1.9 4.7 3.2 4.9 7.75 6.85c1.1.45 1.95.7 2.6.9.1.05 1.15.35 2.1.3.85-.05 2.8-1.15 3.2-2.25.4-1.1.4-2.05.3-2.25-.1-.2-.4-.3-.95-.6s-3.2-1.6-3.7-1.8c-.5-.2-.85-.3-1.2.25s-1.4 1.8-1.7 2.15c-.3.35-.6.4-.15.15s-2.3-.85-4.4-2.7c-1.6-1.45-2.7-3.25-3.05-3.85-.3-.6.05-.9.35-1.2l.85-1.05c.3-.3.4-.5.6-.8.2-.3.1-.55 0-.8s-1.3-3.15-1.8-4.3z"/>
+        </svg>
+    </button>
+
+    <!-- חלון בחירת מצטיין (Modal) -->
+    <div class="modal-overlay" id="bonusModal">
+        <div class="modal-content">
+            <button class="close-modal-x" onclick="closeModal('bonusModal')">✖</button>
+            <h3 id="bonusModalTitle">בחירת מצטיין</h3>
+            <select id="bonusSelect" class="modal-input"></select>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-cancel" onclick="closeModal('bonusModal')">ביטול</button>
+                <button class="modal-btn modal-btn-confirm" onclick="applyBonus()">הענק</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- החלון הקופץ להוספת פעיל -->
+    <div class="modal-overlay" id="addModal">
+        <div class="modal-content">
+            <button class="close-modal-x" onclick="closeModal('addModal')">✖</button>
+            <h3>הוספת פעיל/ה לשכב"ג</h3>
+            <input type="text" id="newName" class="modal-input" placeholder="שם מלא..." onkeypress="handleKeyPress(event)">
+            <p style="font-size: 0.85em; color: #7f8c8d; margin-bottom: 5px;">המערכת תגריל אימוג'י אישי אוטומטית!</p>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-cancel" onclick="closeModal('addModal')">ביטול</button>
+                <button class="modal-btn modal-btn-confirm" onclick="addPerson()">הוסף</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- אזור הפודיום החודשי -->
+    <div id="podiumArea"></div>
+
+    <!-- רשימת השמות -->
+    <div id="peopleList"></div>
+    
+    <!-- סיכום נקודות -->
+    <div id="totalsSummary"></div>
+
+    <script>
+        const randomEmojis = ['😎','🤪','🤠','👽','🤖','👻','🦊','🦁','🐸','🦄','🍕','🎸','🚀','🔥','⭐','🤙','👾'];
+
+        function getLevel(points) {
+            if (points >= 40) return '💎 אגדת שכב"ג';
+            if (points >= 30) return '🥇 כוכב זהב';
+            if (points >= 20) return '🥈 כוכב כסף';
+            if (points >= 10) return '🥉 כוכב ארד';
+            return '🌱 מתחיל';
+        }
+
+        let people = JSON.parse(localStorage.getItem('kremboEilatData')) || [];
+        let winners = JSON.parse(localStorage.getItem('kremboEilatWinners')) || [];
+        let actionHof = JSON.parse(localStorage.getItem('kremboEilatActionHof')) || [];
+        let bullPoints = parseInt(localStorage.getItem('kremboEilatBullPoints')) || 0;
+
+        // הוספת פונקציית הטבלה השנתית ושדרוג הנתונים
+        let updatedUsers = false;
+        people.forEach(p => {
+            if(!p.avatar) {
+                p.avatar = randomEmojis[Math.floor(Math.random() * randomEmojis.length)];
+                updatedUsers = true;
+            }
+            if(p.yearlyGreen === undefined) {
+                p.yearlyGreen = p.green || 0;
+                updatedUsers = true;
+            }
+        });
+        if(updatedUsers) localStorage.setItem('kremboEilatData', JSON.stringify(people));
+
+        // ניהול תפריט צד
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('open');
+        }
+
+        // ניהול מודאלים
+        function openModal(modalId) {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sidebarOverlay').classList.remove('open');
+            
+            document.getElementById(modalId).style.display = 'flex';
+            if(modalId === 'addModal') setTimeout(() => document.getElementById('newName').focus(), 100);
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+            if(modalId === 'addModal') document.getElementById('newName').value = '';
+        }
+
+        let currentBonusType = '';
+        function openBonusModal(type) {
+            if(people.length === 0) {
+                alert("אין פעילים ברשימה!");
+                return;
+            }
+            currentBonusType = type;
+            document.getElementById('bonusModalTitle').innerText = type === 'action' ? 'בחירת מצטיין פעולה (+5)' : 'בחירת מצטיין מוראלים (+3)';
+            
+            const select = document.getElementById('bonusSelect');
+            select.innerHTML = '<option value="">-- בחר פעיל --</option>';
+            people.forEach((p, index) => {
+                select.innerHTML += `<option value="${index}">${p.avatar} ${p.name}</option>`;
+            });
+            
+            openModal('bonusModal');
+        }
+
+        function applyBonus() {
+            const index = document.getElementById('bonusSelect').value;
+            if(index === '') return;
+            
+            const person = people[index];
+            if (currentBonusType === 'action') {
+                updatePersonPoints(index, 5);
+                const dateStr = new Date().toLocaleDateString('he-IL');
+                actionHof.unshift({ name: person.name, avatar: person.avatar, date: dateStr }); 
+                localStorage.setItem('kremboEilatActionHof', JSON.stringify(actionHof));
+                renderActionHof();
+                alert(`5 נקודות הוענקו ל-${person.name} והוא נוסף להיכל מצטייני הפעולות!`);
+            } else if (currentBonusType === 'morale') {
+                updatePersonPoints(index, 3);
+                alert(`3 נקודות מוראל הוענקו ל-${person.name}!`);
+            }
+            closeModal('bonusModal');
+        }
+
+        // סגירת חלונות בלחיצה על הרקע
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal-overlay')) {
+                event.target.style.display = 'none';
+            }
+        }
+
+        function getSortedEntities() {
+            let displayEntities = people.map((p, index) => ({ 
+                isBull: false, name: p.name, score: p.green, avatar: p.avatar, originalIndex: index 
+            }));
+            displayEntities.push({ isBull: true, name: "השור", score: bullPoints, avatar: "🐂", originalIndex: -1 });
+            displayEntities.sort((a, b) => b.score - a.score);
+            return displayEntities;
+        }
+
+        function renderList() {
+            const listDiv = document.getElementById('peopleList');
+            const podiumDiv = document.getElementById('podiumArea');
+            listDiv.innerHTML = '';
+            podiumDiv.innerHTML = '';
+            
+            let totalGreen = people.reduce((sum, p) => sum + p.green, 0);
+            let displayEntities = getSortedEntities();
+
+            const top3 = displayEntities.slice(0, 3);
+            const rest = displayEntities.slice(3);
+
+            // בניית פודיום חודשי (כולל שור)
+            if (top3.length > 0) {
+                const podiumOrder = [];
+                if(top3.length > 1) podiumOrder.push({ entity: top3[1], rank: 2, stepClass: 'step-2', medal: '🥈' });
+                if(top3.length > 0) podiumOrder.push({ entity: top3[0], rank: 1, stepClass: 'step-1', medal: '🏆' });
+                if(top3.length > 2) podiumOrder.push({ entity: top3[2], rank: 3, stepClass: 'step-3', medal: '🥉' });
+
+                let podiumHTML = '<div class="podium-section">';
+                podiumOrder.forEach(item => {
+                    let isBullClass = item.entity.isBull ? 'step-bull' : '';
+                    let buttonsHTML = '';
+
+                    if (item.entity.isBull) {
+                        buttonsHTML = `
+                            <div class="point-group">
+                                <button class="point-btn btn-red" onclick="updateBullPoints(1)">+</button>
+                                <span class="score-val score-red" style="color:#d32f2f !important;">${item.entity.score}</span>
+                                <button class="point-btn btn-red" onclick="updateBullPoints(-1)">-</button>
+                            </div>
+                        `;
+                    } else {
+                        buttonsHTML = `
+                            <div class="point-group">
+                                <button class="point-btn btn-green" onclick="updatePersonPoints(${item.entity.originalIndex}, 1)">+</button>
+                                <span class="score-val score-green">${item.entity.score}</span>
+                                <button class="point-btn btn-green" onclick="updatePersonPoints(${item.entity.originalIndex}, -1)">-</button>
+                            </div>
+                            <button class="delete-btn" style="width:24px; height:24px; font-size:12px; margin-top:5px;" onclick="removePerson(${item.entity.originalIndex})" title="מחק פעיל">🗑️</button>
+                        `;
+                    }
+
+                    let levelHtml = item.entity.isBull ? '' : `<div class="podium-level">${getLevel(item.entity.score)}</div>`;
+
+                    podiumHTML += `
+                        <div class="podium-step ${item.stepClass} ${isBullClass}">
+                            <div class="podium-medal">${item.medal}</div>
+                            <div class="podium-rank">#${item.rank}</div>
+                            <div class="podium-name">${item.entity.avatar} ${item.entity.name}</div>
+                            ${levelHtml}
+                            <div class="podium-controls-wrapper">
+                                ${buttonsHTML}
+                            </div>
+                        </div>
+                    `;
+                });
+                podiumHTML += '</div>';
+                podiumDiv.innerHTML = podiumHTML;
+            }
+
+            rest.forEach((item) => {
+                if (item.isBull) {
+                    listDiv.innerHTML += `
+                        <div class="person-card bull-card">
+                            <div class="card-right-side">
+                                <p class="person-name"><span class="person-avatar">${item.avatar}</span> ${item.name}</p>
+                            </div>
+                            <div class="card-left-side">
+                                <div class="points-controls">
+                                    <div class="point-group">
+                                        <button class="point-btn btn-red" onclick="updateBullPoints(1)">+</button>
+                                        <span class="score-val score-red">${item.score}</span>
+                                        <button class="point-btn btn-red" onclick="updateBullPoints(-1)">-</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    listDiv.innerHTML += `
+                        <div class="person-card">
+                            <div class="card-right-side">
+                                <p class="person-name"><span class="person-avatar">${item.avatar}</span> ${item.name}</p>
+                                <span class="level-badge">${getLevel(item.score)}</span>
+                            </div>
+                            <div class="card-left-side">
+                                <div class="points-controls">
+                                    <div class="point-group">
+                                        <button class="point-btn btn-green" onclick="updatePersonPoints(${item.originalIndex}, 1)">+</button>
+                                        <span class="score-val score-green">${item.score}</span>
+                                        <button class="point-btn btn-green" onclick="updatePersonPoints(${item.originalIndex}, -1)">-</button>
+                                    </div>
+                                    <button class="delete-btn" onclick="removePerson(${item.originalIndex})" title="מחק פעיל">🗑️</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            const totalsDiv = document.getElementById('totalsSummary');
+            if (people.length > 0 || bullPoints > 0) {
+                totalsDiv.innerHTML = `
+                    <div class="summary-card">
+                        <span>סה"כ תפוקת שכב"ג:</span>
+                        <div style="display: flex; gap: 20px;">
+                            <span style="color: #4CAF50;">נקודות ירוקות: ${totalGreen}</span>
+                            <span style="color: #d32f2f;">נקודות השור: ${bullPoints}</span>
+                        </div>
+                    </div>
+                `;
+            } else {
+                totalsDiv.innerHTML = '';
+            }
+            
+            localStorage.setItem('kremboEilatData', JSON.stringify(people));
+            localStorage.setItem('kremboEilatBullPoints', bullPoints);
+
+            // רינדור הטבלה השנתית בכל עדכון
+            renderYearlyTable();
+        }
+
+        // פונקציית עדכון משודרגת שמעדכנת גם את המונה השנתי
+        function updatePersonPoints(index, amount) {
+            let oldGreen = people[index].green;
+            people[index].green += amount;
+            if (people[index].green < 0) people[index].green = 0;
+            
+            let diff = people[index].green - oldGreen;
+            people[index].yearlyGreen = (people[index].yearlyGreen || 0) + diff;
+            if (people[index].yearlyGreen < 0) people[index].yearlyGreen = 0;
+
+            renderList();
+        }
+
+        function updateBullPoints(amount) {
+            if (amount === 'all') { bullPoints = 0; } 
+            else { bullPoints += amount; }
+            if (bullPoints < 0) bullPoints = 0;
+            renderList();
+        }
+
+        function addPerson() {
+            const inputName = document.getElementById('newName').value.trim();
+            
+            if (inputName !== '') {
+                if(people.some(p => p.name === inputName)) {
+                    alert('פעיל/ה בשם זה כבר קיים/ת ברשימה!');
+                    return;
+                }
+                
+                let randomAvatar = randomEmojis[Math.floor(Math.random() * randomEmojis.length)];
+
+                people.push({ name: inputName, green: 0, yearlyGreen: 0, avatar: randomAvatar });
+                closeModal('addModal'); 
+                renderList(); 
+            }
+        }
+        
+        function handleKeyPress(event) { if (event.key === 'Enter') addPerson(); }
+
+        function removePerson(index) {
+            if (confirm(`למחוק את ${people[index].name} מהרשימה?`)) {
+                people.splice(index, 1);
+                renderList();
+            }
+        }
+
+        function shareToWhatsApp() {
+            let displayEntities = getSortedEntities();
+            let text = "✨🏆 *עדכון מצב נקודות - שכב\"ג אילת!* 🏆✨\n\n";
+
+            text += "🌟 *הפודיום המטורף שלנו:* 🌟\n";
+            if(displayEntities.length > 0) text += `🥇 מקום 1: ${displayEntities[0].avatar} ${displayEntities[0].name} עם ${displayEntities[0].score} נק' 🔥\n`;
+            if(displayEntities.length > 1) text += `🥈 מקום 2: ${displayEntities[1].avatar} ${displayEntities[1].name} עם ${displayEntities[1].score} נק' 💫\n`;
+            if(displayEntities.length > 2) text += `🥉 מקום 3: ${displayEntities[2].avatar} ${displayEntities[2].name} עם ${displayEntities[2].score} נק' ⚡\n`;
+
+            if(displayEntities.length > 3) {
+                text += "\n🔥 *ממש קרובים לפודיום (הטופ 5):* 🔥\n";
+                if(displayEntities.length > 3) text += `4️⃣ ${displayEntities[3].avatar} ${displayEntities[3].name} - ${displayEntities[3].score} נק' 🚀\n`;
+                if(displayEntities.length > 4) text += `5️⃣ ${displayEntities[4].avatar} ${displayEntities[4].name} - ${displayEntities[4].score} נק' 🎯\n`;
+            }
+
+            text += "\n💪 *יאללה שכב\"ג לתת בראש!!* 💙💚";
+
+            const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+            window.open(url, '_blank');
+        }
+
+        function renderActionHof() {
+            const listDiv = document.getElementById('actionHofList');
+            if(actionHof.length === 0) {
+                listDiv.innerHTML = '<p style="text-align: center; color: #999; font-size: 0.9em;">עדיין לא נבחרו מצטייני פעולה...</p>';
+                return;
+            }
+            
+            listDiv.innerHTML = actionHof.map((record, idx) => `
+                <div class="action-record">
+                    <div>
+                        <span style="font-size: 1.2em; margin-right: 5px;">${record.avatar}</span>
+                        <strong style="color: #2c3e50;">${record.name}</strong>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="color: #7f8c8d; font-size: 0.85em;">📅 ${record.date}</span>
+                        <button class="delete-btn" style="width:20px; height:20px; font-size:12px; background:none;" onclick="removeActionHof(${idx})" title="מחק">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function removeActionHof(idx) {
+            if(confirm("למחוק את התיעוד הזה מהיכל מצטייני הפעולות?")) {
+                actionHof.splice(idx, 1);
+                localStorage.setItem('kremboEilatActionHof', JSON.stringify(actionHof));
+                renderActionHof();
+            }
+        }
+
+        function renderWinners() {
+            const hofDiv = document.getElementById('hofArea');
+            if (winners.length === 0) {
+                hofDiv.innerHTML = '<p style="text-align: center; color: #999; font-size: 1.1em; width: 100%;">ההיכל מחכה לאלוף הראשון...</p>';
+                return;
+            }
+            
+            hofDiv.innerHTML = winners.map((w, index) => {
+                const isBullCard = w.isBull ? 'hof-bull' : '';
+                const icon = w.isBull ? '🐂' : '🏆';
+                return `
+                <div class="hof-card ${isBullCard}">
+                    <button class="hof-edit-btn" onclick="removeWinner(${index})" title="מחק" style="position:absolute; top:5px; left:5px;">✖</button>
+                    <div style="display:flex; align-items:center;">
+                        <div class="hof-icon">${icon}</div>
+                        <div style="text-align:right;">
+                            <div class="hof-month">${w.month}</div>
+                            <div class="hof-name">${w.name}</div>
+                        </div>
+                    </div>
+                    <div class="hof-score">${w.score} נק'</div>
+                </div>
+            `}).join('');
+            
+            localStorage.setItem('kremboEilatWinners', JSON.stringify(winners));
+        }
+
+        function renderYearlyTable() {
+            const listDiv = document.getElementById('yearlyTableList');
+            const podiumDiv = document.getElementById('yearlyPodiumArea');
+            listDiv.innerHTML = '';
+            podiumDiv.innerHTML = '';
+            
+            if(people.length === 0) {
+                listDiv.innerHTML = '<p style="text-align: center; color: #999;">אין פעילים ברשימה...</p>';
+                return;
+            }
+            
+            let yearlySorted = [...people].sort((a, b) => (b.yearlyGreen || 0) - (a.yearlyGreen || 0));
+            
+            const top3 = yearlySorted.slice(0, 3);
+            const rest = yearlySorted.slice(3);
+
+            // פודיום שנתי
+            if (top3.length > 0) {
+                const podiumOrder = [];
+                if(top3.length > 1) podiumOrder.push({ person: top3[1], rank: 2, stepClass: 'step-2', medal: '🥈' });
+                if(top3.length > 0) podiumOrder.push({ person: top3[0], rank: 1, stepClass: 'step-1', medal: '🏆' });
+                if(top3.length > 2) podiumOrder.push({ person: top3[2], rank: 3, stepClass: 'step-3', medal: '🥉' });
+
+                let podiumHTML = '<div class="podium-section" style="margin-top:40px; margin-bottom:30px;">';
+                podiumOrder.forEach(item => {
+                    podiumHTML += `
+                        <div class="podium-step ${item.stepClass}">
+                            <div class="podium-medal">${item.medal}</div>
+                            <div class="podium-rank">#${item.rank}</div>
+                            <div class="podium-name">${item.person.avatar} ${item.person.name}</div>
+                            <div class="podium-level">${getLevel(item.person.yearlyGreen)}</div>
+                            <div class="podium-controls-wrapper" style="justify-content: center; align-items: center; padding: 10px;">
+                                <span style="font-size: 1.4em; font-weight: 900; color: #006b6b;">${item.person.yearlyGreen || 0} נק'</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                podiumHTML += '</div>';
+                podiumDiv.innerHTML = podiumHTML;
+            }
+            
+            // שאר הרשימה השנתית
+            listDiv.innerHTML = rest.map((p, idx) => {
+                let actualRank = idx + 4;
+                return `
+                <div class="yearly-record" style="margin-bottom: 10px;">
+                    <div class="yearly-left">
+                        <span style="display:inline-block; width:30px; text-align:center; color:#999; font-weight:bold; font-size:1.2em;">#${actualRank}</span>
+                        <span style="font-size: 1.5em;">${p.avatar}</span>
+                        <strong style="font-size: 1.2em; color: #2c3e50;">${p.name}</strong>
+                        <span class="level-badge" style="margin-right:10px;">${getLevel(p.yearlyGreen)}</span>
+                    </div>
+                    <div style="font-size: 1.3em; color: #4CAF50; font-weight: 900;">
+                        ${p.yearlyGreen || 0} נק'
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        function closeMonth() {
+            if (people.length === 0 && bullPoints === 0) {
+                alert("אין נתונים החודש!");
+                return;
+            }
+            
+            let displayEntities = getSortedEntities();
+            const maxScore = displayEntities[0].score;
+            if (maxScore === 0) {
+                alert("אף אחד לא צבר נקודות החודש!");
+                return;
+            }
+
+            const topWinners = displayEntities.filter(e => e.score === maxScore);
+            const isBullWinner = topWinners.some(e => e.isBull);
+
+            if (isBullWinner) {
+                document.body.classList.add('bull-win-animation');
+                setTimeout(() => {
+                    alert("אוי לא! 🐂 השור סיים במקום הראשון!\nהקבוצה צברה יותר מדי נקודות אדומות והפסידה החודש.");
+                    const monthName = prompt("הכנס את שם החודש לתיעוד ניצחון השור בהיכל התהילה (לדוגמה: נובמבר):");
+                    if (monthName) {
+                        winners.unshift({ month: monthName, name: "השור (הפסד)", score: maxScore, isBull: true });
+                        renderWinners();
+                        resetEverything();
+                    }
+                    document.body.classList.remove('bull-win-animation');
+                }, 1000);
+            } else {
+                confetti({ particleCount: 200, spread: 100, origin: { y: 0.6 }, zIndex: 9999 });
+                
+                setTimeout(() => {
+                    let winnerName = topWinners.map(p => p.name).join(" ו-");
+                    const monthName = prompt(`המנצח/ת עם ${maxScore} נקודות: ${winnerName}!\n\nהכנס את שם החודש לשמירה בהיכל התהילה (לדוגמה: אוקטובר):`);
+                    if (monthName) {
+                        winners.unshift({ month: monthName, name: winnerName, score: maxScore, isBull: false });
+                        renderWinners();
+                        resetEverything();
+                    }
+                }, 1500);
+            }
+        }
+
+        function resetEverything() {
+            if (confirm("החודש נסגר ונשמר בהצלחה!\nהאם לאפס עכשיו את כל הנקודות כדי להתחיל חודש חדש?\n(הטבלה השנתית לעולם לא תתאפס!)")) {
+                people.forEach(p => { p.green = 0; });
+                bullPoints = 0;
+                renderList();
+            }
+        }
+
+        function removeWinner(index) {
+            if(confirm("למחוק את התיעוד הזה מהיכל התהילה החודשי?")) {
+                winners.splice(index, 1);
+                renderWinners();
+            }
+        }
+
+        renderList();
+        renderWinners();
+        renderActionHof();
+    </script>
+
+</body>
+</html>
